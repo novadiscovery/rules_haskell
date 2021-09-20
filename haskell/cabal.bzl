@@ -529,12 +529,20 @@ def _haskell_cabal_library_impl(ctx):
         transitive_haddocks =
             _gather_transitive_haddocks(ctx.attr.deps) if ctx.attr.haddock else depset([]),
     )
+    acc = []
+
+    for f in ctx.files.data:
+        p = paths.relativize("{}/{}".format(data_dir.short_path, f.owner.name), data_dir.owner.package)
+        out_f = hs.actions.declare_file(p)
+        acc.append(out_f)
+
     outputs = [
         package_database,
         interfaces_dir,
         vanilla_library,
         data_dir,
-    ]
+    ] + acc
+
     if ctx.attr.haddock:
         outputs.extend([haddock_file, haddock_html_dir])
     if dynamic_library != None:
@@ -557,13 +565,20 @@ def _haskell_cabal_library_impl(ctx):
         progress_message = "HaskellCabalLibrary {}".format(hs.label),
     )
 
-    default_info = DefaultInfo(
-        files = depset([static_library] + ([dynamic_library] if dynamic_library != None else [])),
-        runfiles = ctx.runfiles(
-            files = [data_dir],
-            collect_default = True,
-        ),
+    runfiles = ctx.runfiles(
+        files = [data_dir] + acc,
+        collect_default = True,
     )
+
+    # for dep in ctx.attr.deps:
+    #     runfiles = runfiles.merge(dep[DefaultInfo].default_runfiles)
+
+    default_info = DefaultInfo(
+        files = depset(acc + [static_library] + ([dynamic_library] if dynamic_library != None else [])),
+        #files = depset([static_library] + ([dynamic_library] if dynamic_library != None else [])),
+        runfiles = runfiles,
+    )
+
     hs_info = HaskellInfo(
         package_databases = depset([package_database], transitive = [dep_info.package_databases]),
         version_macros = set.empty(),
@@ -718,6 +733,11 @@ haskell_cabal_library = rule(
             library symlink underneath `_solib_<cpu>` will be shortened to
             avoid exceeding the MACH-O header size limit on MacOS.""",
         ),
+        "data": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "TODO",
+        ),
     },
     toolchains = [
         "@bazel_tools//tools/cpp:toolchain_type",
@@ -865,14 +885,19 @@ def _haskell_cabal_binary_impl(ctx):
         user_compile_flags = [],
         user_repl_flags = [],
     )
+
+    runfiles = ctx.runfiles(
+        files = [data_dir],
+        transitive_files = c.runfiles,
+        collect_default = True,
+    )
+    # for dep in ctx.attr.deps:
+    #     runfiles = runfiles.merge(dep[DefaultInfo].default_runfiles)
+
     default_info = DefaultInfo(
         files = depset([binary]),
         executable = binary,
-        runfiles = ctx.runfiles(
-            files = [data_dir],
-            transitive_files = c.runfiles,
-            collect_default = True,
-        ),
+        runfiles = runfiles,
     )
 
     return [hs_info, cc_info, default_info]

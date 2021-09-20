@@ -265,6 +265,7 @@ load(
 )
 
 haskell_register_ghc_nixpkgs(
+    asterius = True,
     attribute_path = "",
     cabalopts = test_cabalopts,
     ghcopts = test_ghcopts,
@@ -282,6 +283,7 @@ load(
 )
 
 haskell_register_ghc_bindists(
+    asterius = True,
     cabalopts = test_cabalopts,
     ghcopts = test_ghcopts,
     version = test_ghc_version,
@@ -482,10 +484,11 @@ http_archive(
     urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/3.6.0/rules_nodejs-3.6.0.tar.gz"],
 )
 
-load("@build_bazel_rules_nodejs//:index.bzl", "node_repositories")
+load("//haskell/asterius:asterius_repositories.bzl", "asterius_dependencies_from_nix")
 
-node_repositories(
-    vendored_node = "@nixpkgs_nodejs",
+asterius_dependencies_from_nix(
+    nix_repository = "@nixpkgs_default",
+    nixpkgs_package_rule = nixpkgs_package,
 )
 
 http_archive(
@@ -587,3 +590,7 @@ bind(
 load("//tools:repositories.bzl", "rules_haskell_worker_dependencies")
 
 rules_haskell_worker_dependencies()
+
+load("@rules_sh//sh:posix.bzl", "sh_posix_configure")
+
+sh_posix_configure()

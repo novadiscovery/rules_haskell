@@ -1,0 +1,22 @@
+load(
+    "@rules_haskell//haskell/asterius:asterius.bzl",
+    "ahc_dist",
+    "asterius_binary",
+    "asterius_test",
+    "asterius_webpack",
+)
+
+package(default_testonly = 1)
+
+ahc_dist(
+    name = "test_ahc_dist_browser",
+    dep = "//tests/binary-with-lib",
+    main_output = "out_browser.mjs",
+    target = "browser",
+)
+
+asterius_webpack(
+    name = "asterius_webpack_test",
+    out = "example.bundle.js",
+    dep = ":test_ahc_dist_browser",
+)

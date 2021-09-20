@@ -11,11 +11,18 @@ load(
 )
 load(
     ":private/workspace_utils.bzl",
+    "default_constraints",
     "define_rule",
     "execute_or_fail_loudly",
     "resolve_labels",
 )
 load(":private/validate_attrs.bzl", "check_deprecated_attribute_usage")
+load(
+    "//haskell/asterius:asterius_workspace_rules.bzl",
+    "ahc_bindist",
+    "asterius_bundle",
+    "labels_from_bundle_name",
+)
 
 def check_ghc_version(repository_ctx):
     ghc_name = "ghc-{}".format(repository_ctx.attr.version)
@@ -140,24 +147,13 @@ _ghc_nixpkgs_haskell_toolchain = repository_rule(
 )
 
 def _ghc_nixpkgs_toolchain_impl(repository_ctx):
-    # These constraints might look tautological, because they always
-    # match the host platform if it is the same as the target
-    # platform. But they are important to state because Bazel
-    # toolchain resolution prefers other toolchains with more specific
-    # constraints otherwise.
     if repository_ctx.attr.target_constraints == None and repository_ctx.attr.exec_constraints == None:
-        target_constraints = ["@platforms//cpu:x86_64"]
-        if repository_ctx.os.name == "linux":
-            target_constraints.append("@platforms//os:linux")
-        elif repository_ctx.os.name == "mac os x":
-            target_constraints.append("@platforms//os:osx")
-        exec_constraints = list(target_constraints)
+        target_constraints, exec_constraints = default_constraints(repository_ctx)
     else:
         target_constraints = repository_ctx.attr.target_constraints
         exec_constraints = list(repository_ctx.attr.exec_constraints)
 
     exec_constraints.append("@io_tweag_rules_nixpkgs//nixpkgs/constraints:support_nix")
-
     repository_ctx.file(
         "BUILD",
         executable = False,
@@ -210,7 +206,8 @@ def haskell_register_ghc_nixpkgs(
         repository = None,
         nix_file_content = None,
         exec_constraints = None,
-        target_constraints = None):
+        target_constraints = None,
+        asterius = False):
     """Register a package from Nixpkgs as a toolchain.
 
     Toolchains can be used to compile Haskell code. To have this
@@ -271,6 +268,7 @@ def haskell_register_ghc_nixpkgs(
     nixpkgs_sh_posix_repo_name = "{}_sh_posix_nixpkgs".format(name)
     haskell_toolchain_repo_name = "{}_ghc_nixpkgs_haskell_toolchain".format(name)
     toolchain_repo_name = "{}_ghc_nixpkgs_toolchain".format(name)
+    asterius_repo_name = "{}_asterius".format(name)
 
     static_runtime, fully_static_link = _check_static_attributes_compatibility(
         is_static = is_static,
@@ -325,6 +323,43 @@ def haskell_register_ghc_nixpkgs(
         target_constraints = target_constraints,
         haskell_toolchain_repo_name = haskell_toolchain_repo_name,
     )
+
+    if asterius:
+        # TODO: target constraint is only needed to check local but it may not be necessary.
+        # TODO: repo name should depend on haskell toolchain name.
+
+        bundle_repo_name = "asterius_bundle_{}".format(haskell_toolchain_repo_name)
+        asterius_version = "0.0.1"
+
+        # Download the asterius bundle.
+        print("calling asterius_bundle with exec_constraints=", exec_constraints)
+        asterius_bundle(
+            name = bundle_repo_name,
+            version = asterius_version,  # TODO: pass as argument. Which ghc version this correspond to ?
+            exec_constraints = exec_constraints,
+        )
+
+        (asterius_lib_setting_file, ahc_pkg, asterius_binaries, full_bundle) = labels_from_bundle_name(bundle_repo_name, asterius_version)
+
+        # Create and register asterius toolchains
+        ahc_bindist(
+            asterius_repo_name,
+            asterius_version,
+            exec_constraints,
+            # "@{}//:bin/ghc".format(nixpkgs_ghc_repo_name),
+            nixpkgs_ghc_repo_name,
+            asterius_lib_setting_file,
+            ahc_pkg,
+            asterius_binaries,
+            full_bundle,
+            compiler_flags,
+            ghcopts,
+            haddock_flags,
+            repl_ghci_args,
+            cabalopts,
+            locale,
+        )
+
     native.register_toolchains("@{}//:toolchain".format(toolchain_repo_name))
 
     # Unix tools toolchain required for Cabal packages

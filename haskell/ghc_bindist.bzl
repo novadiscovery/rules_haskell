@@ -10,12 +10,20 @@ load(
 )
 load(
     ":private/workspace_utils.bzl",
+    "default_constraints",
     "define_rule",
     "execute_or_fail_loudly",
     "find_python",
     "resolve_labels",
 )
 load(":private/validate_attrs.bzl", "check_deprecated_attribute_usage")
+load(":private/dict.bzl", "find")
+load(
+    "//haskell/asterius:asterius_workspace_rules.bzl",
+    "ahc_bindist",
+    "asterius_bundle",
+    "labels_from_bundle_name",
+)
 
 # If you change this, change stackage's version in the start script
 # (see stackage.org).
@@ -440,6 +448,7 @@ rm -f
         substitutions = {
             "%{toolchain_libraries}": toolchain_libraries,
             "%{toolchain}": toolchain,
+            "%{asterius_toolchain}": "",
         },
         executable = False,
     )
@@ -526,7 +535,8 @@ def ghc_bindist(
         haddock_flags = None,
         repl_ghci_args = None,
         cabalopts = None,
-        locale = None):
+        locale = None,
+        asterius = False):
     """Create a new repository from binary distributions of GHC.
 
     The repository exports two targets:
@@ -612,6 +622,46 @@ def ghc_bindist(
         target = target,
     )
     native.register_toolchains("@{}//:toolchain".format(toolchain_name))
+    if asterius:
+        # We also register a modified version of the toolchain that uses asterius.
+
+        bundle_repo_name = "asterius_bundle_{}".format(toolchain_name)
+        asterius_version = "0.0.1"
+
+        # Download the asterius bundle.
+        os, _, arch = target.partition("_")
+        os_constraint = {
+            "darwin": "@platforms//os:osx",
+            "linux": "@platforms//os:linux",
+            "windows": "@platforms//os:windows",
+        }.get(os)
+        arch_constraint = {"amd64": "@platforms//cpu:x86_64"}.get(arch)
+        exec_constraints = [os_constraint, arch_constraint]
+        print("calling asterius_bundle with exec_constraints=", exec_constraints)
+        asterius_bundle(
+            name = bundle_repo_name,
+            version = asterius_version,  # TODO: pass as argument. Which ghc version this correspond to ?
+            exec_constraints = exec_constraints,
+        )
+
+        (asterius_lib_setting_file, ahc_pkg, asterius_binaries, full_bundle) = labels_from_bundle_name(bundle_repo_name, asterius_version)
+
+        ahc_bindist(
+            "asterius_repo_{}".format(bindist_name),
+            asterius_version,
+            exec_constraints,
+            bindist_name,
+            asterius_lib_setting_file,
+            ahc_pkg,
+            asterius_binaries,
+            full_bundle,
+            compiler_flags,
+            ghcopts,
+            haddock_flags,
+            repl_ghci_args,
+            cabalopts,
+            locale,
+        )
 
 def haskell_register_ghc_bindists(
         version = None,
@@ -620,7 +670,8 @@ def haskell_register_ghc_bindists(
         haddock_flags = None,
         repl_ghci_args = None,
         cabalopts = None,
-        locale = None):
+        locale = None,
+        asterius = False):
     """ Register GHC binary distributions for all platforms as toolchains.
 
     See [rules_haskell_toolchains](toolchain.html#rules_haskell_toolchains).
@@ -648,7 +699,9 @@ def haskell_register_ghc_bindists(
             repl_ghci_args = repl_ghci_args,
             cabalopts = cabalopts,
             locale = locale,
+            asterius = asterius,
         )
+
     local_sh_posix_repo_name = "rules_haskell_sh_posix_local"
     if local_sh_posix_repo_name not in native.existing_rules():
         sh_posix_configure(name = local_sh_posix_repo_name)

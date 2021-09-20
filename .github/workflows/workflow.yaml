@@ -7,6 +7,7 @@ env:
 jobs:
   test-nixpkgs:
     name: Build & Test - Nixpkgs
+    if : false
     strategy:
       fail-fast: false
       matrix:
@@ -59,6 +60,7 @@ jobs:
 
   test-nixpkgs-cross:
     name: Build & Test - Cross
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -143,11 +145,11 @@ jobs:
           ./tests/run-start-script.sh --use-bindists
           if [[ ${{ matrix.os }} == windows ]]; then
             # On Windows `//...` expands to `/...`.
-            bazel test ///...
+            bazel test ///tests/asterius_binary/...
           else
-            bazel test //...
+            bazel test //tests/asterius_binary/...
           fi
           # Test stack_snapshot pinning
           # NOTE keep in sync with tests/RunTests.hs
-          bazel run @stackage-pinning-test-unpinned//:pin
-          bazel build @stackage-pinning-test//:hspec
+          #bazel run @stackage-pinning-test-unpinned//:pin
+          #bazel build @stackage-pinning-test//:hspec

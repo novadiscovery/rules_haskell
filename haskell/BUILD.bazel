@@ -32,6 +32,7 @@ exports_files(
         "private/cc_wrapper.py.tpl",
         "private/cc_wrapper_windows.sh.tpl",
         "private/pkgdb_to_bzl.py",
+        "private/ghc_info_utils.py",
     ],
 )
 
@@ -70,9 +71,11 @@ bzl_library(
     deps = [
         ":bazel_json",
         ":bazel_tools",
+        "//haskell/asterius",
         "//haskell/experimental:defs.bzl",
         "//haskell/experimental:providers.bzl",
         "//haskell/experimental:transitions.bzl",
+        "//haskell/platforms",
         "@bazel_skylib//lib:collections",
         "@bazel_skylib//lib:dicts",
         "@bazel_skylib//lib:paths",
@@ -96,6 +99,12 @@ cabal_wrapper(
 py_binary(
     name = "pkgdb_to_bzl",
     srcs = ["private/pkgdb_to_bzl.py"],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "ghc_info_utils",
+    srcs = ["private/ghc_info_utils.py"],
     visibility = ["//visibility:public"],
 )
 
@@ -149,6 +158,11 @@ toolchain_type(
     visibility = ["//visibility:public"],
 )
 
+toolchain_type(
+    name = "asterius-toolchain",
+    visibility = ["//visibility:public"],
+)
+
 # XXX: This target is a work-around for toolchain transitions not being
 # implemented, yet. See
 # https://github.com/bazelbuild/proposals/blob/master/designs/2019-02-12-toolchain-transitions.md
@@ -167,4 +181,30 @@ config_setting(
 
 haskell_toolchain_info(
     name = "toolchain_info",
+)
+
+constraint_setting(
+    name = "asterius",
+    visibility = ["//visibility:public"],
+)
+
+constraint_value(
+    name = "with_asterius",
+    constraint_setting = ":asterius",
+    visibility = ["//visibility:public"],
+)
+
+constraint_value(
+    name = "no_asterius",
+    constraint_setting = ":asterius",
+    visibility = ["//visibility:public"],
+)
+
+platform(
+    name = "asterius_platform",
+    constraint_values = [
+        #"@platforms//os:linux",
+        #"@platforms//cpu:wasm32",
+        "@rules_haskell//haskell:with_asterius",
+    ],
 )
