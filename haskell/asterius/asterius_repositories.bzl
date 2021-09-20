@@ -25,10 +25,17 @@ def asterius_dependencies_from_nix(nix_repository, nixpkgs_package_rule):
         ],
         # repository = "@nixpkgs_default",
         repository = nix_repository,
+        fail_not_supported = False,
     )
 
     node_repositories(
+        #name = "nix_node_repository",
         vendored_node = "@nixpkgs_nodejs",
+        preserve_symlinks = False,
+    )
+
+    node_repositories(
+        #name = "bindist_node_repository",
         preserve_symlinks = False,
     )
 

@@ -312,7 +312,7 @@ def asterius_binary(name, entry_point, data):
     nodejs_binary(
         name = name,
         entry_point = entry_point,
-        templated_args = ["--node_options={}".format(opt) for opt in node_options],
+        templated_args = ["--node_options={}".format(opt) for opt in node_options] + ["--nobazel_node_patches "],
         chdir = native.package_name(),
         data = data + ["@npm//:node_modules"],
     )
@@ -321,7 +321,7 @@ def asterius_test(name, entry_point, data):
     nodejs_test(
         name = name,
         entry_point = entry_point,
-        templated_args = ["--node_options={}".format(opt) for opt in node_options],
+        templated_args = ["--node_options={}".format(opt) for opt in node_options] + ["--nobazel_node_patches "],
         chdir = native.package_name(),
         data = data + ["@npm//:node_modules"],
     )
