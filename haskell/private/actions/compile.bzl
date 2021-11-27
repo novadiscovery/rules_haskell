@@ -436,6 +436,7 @@ def compile_binary(
 
         for src_file in srcs:
             module = module_name(hs, src_file)
+            print(module)
 
             # We introduces a few heuristics so users may not name their "Main" module "Main.hs".
             # We have two heuristics:
