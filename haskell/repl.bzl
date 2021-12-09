@@ -364,7 +364,7 @@ def _create_repl(hs, posix, ctx, repl_info, output):
 
     # The base and directory packages are necessary for the GHCi script we use
     # (loads source files and brings in scope the corresponding modules).
-    args = ["-hide-all-packages", "-package", "base", "-package", "directory"]
+    args = ["-hide-all-packages", "-package", "directory"]
 
     # REPL scripts `cd` into the workspace root. Depending on their provenance,
     # some C libraries' files may be in subdirectories which are _only_ relative
