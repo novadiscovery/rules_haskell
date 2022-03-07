@@ -6,9 +6,6 @@ load(":private/versions.bzl", "check_version")
 
 def rules_haskell_dependencies():
     """Provide all repositories that are necessary for `rules_haskell` to function."""
-    if "bazel_version" in dir(native):
-        check_version(native.bazel_version)
-
     maybe(
         http_archive,
         name = "platforms",
