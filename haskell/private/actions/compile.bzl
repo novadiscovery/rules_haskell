@@ -232,16 +232,7 @@ def _compilation_defaults(hs, cc, java, posix, dep_info, plugin_dep_info, srcs, 
             idir = import_dir_map[s]
             set.mutable_insert(import_dirs, idir)
 
-    # Write the -optP flags to a parameter file because they can be very long on Windows
-    # e.g. 27Kb for grpc-haskell
-    # Equivalent to: compile_flags += ["-optP" + f for f in cc.cpp_flags]
-    optp_args_file = hs.actions.declare_file("optp_args_%s" % hs.name)
-    optp_args = hs.actions.args()
-    optp_args.add_all(cc.cpp_flags)
-    optp_args.set_param_file_format("multiline")
-    hs.actions.write(optp_args_file, optp_args)
-    compile_flags += ["-optP@" + optp_args_file.path]
-
+    compile_flags += ["-optP" + f for f in cc.cpp_flags]
     compile_flags += cc.include_args
 
     # This is absolutely required otherwise GHC doesn't know what package it's
@@ -328,7 +319,6 @@ def _compilation_defaults(hs, cc, java, posix, dep_info, plugin_dep_info, srcs, 
             extra_srcs,
             header_files,
             pkg_info_inputs,
-            depset([optp_args_file]),
         ],
     )
 
