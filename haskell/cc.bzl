@@ -214,6 +214,8 @@ def ghc_cc_program_args(hs, cc):
         cc + " -E -undef -traditional",
         "-optc-fno-stack-protector",
     ]
-    if hs.toolchain.numeric_version >= [8, 10, 3]:
+    if hs.toolchain.numeric_version >= [9, 4, 1]:
+        args.append("-pgml-supports-no-pie")
+    elif hs.toolchain.numeric_version >= [8, 10, 3]:
         args.append("-pgmc-supports-no-pie")
     return args
